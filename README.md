@@ -118,13 +118,9 @@ Run each weekly file independently
 * **Seth DeVore** - *Coding and Analysis* - [WVU Faculty Page] (https://physics.wvu.edu/faculty-and-staff/faculty/seth-devore)
 * **John Stewart** - *Research Advisor* [Stewart Physics](http://stewartphysics.com/contact.html)
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+* Thanks to everyone's whose code examples helped to make this run!
+
 
