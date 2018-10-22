@@ -13,6 +13,10 @@ library(pROC)
 library(varSelRF)
 library(pscl)
 library(MASS)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(Rmisc)
 #Break Dataset(BorBetter is the binary)
 
 
@@ -86,7 +90,7 @@ fit <- randomForest(as.factor(BorBetter) ~
                       IsFirstGen +
                       IsFirstFall +
                       MathEntry +
-                      IsWV, data = dataLogTrain, ntree = 10000)
+                      IsWV, data = dataLogTrain, ntree = 10000, importance = T)
 
 varImpPlot(fit)
 
@@ -96,6 +100,30 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("CURCMP","GPA","STEM Courses\n Enrolled", "Credits\n Earned", "Credits\n Enrolled",           
+                         "HSGPA","ACTSATM","ACTSATV","Cal 1 Grade", "Cal 1 Attempts",      
+                         "AP Count","AP Credit", "Transfer Count", "Transfer Credit","First Gen",          
+                         "First Fall", "Math Entry", "WV Resident")
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
+
 
 fit2<-varSelRF(dataLogTrain[,c("CURCMP" ,
                           "CURGPA" ,
@@ -130,6 +158,17 @@ roc.mod2<-roc(TestActual, pred[,2])
 plot.roc(roc.mod2,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod2),"\n")
 
+#make some nice plots
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
 
 #Class Fit------------------------------------------------------------
 
@@ -146,12 +185,21 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
 #fit all------------------------
 
 fit <- randomForest(as.factor(BorBetter) ~ FMCE.PrePercent47 +
                       HwWeek1 +
                       ClTotalWeek1 +
-                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000)
+                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000, importance = T)
 #print(fit) 
 print(importance(fit)) 
 
@@ -161,6 +209,36 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("FMCE", "HW", "Clickers", "Cal 1 Attempts", "CURCMP", "GPA" )
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
+
 
 #fit really all------------------------
 
@@ -193,6 +271,7 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
 
 
 #Logistic Regression
@@ -331,6 +410,15 @@ roc.modLAIC4<-roc(TestActual, pred)
 plot.roc(roc.modLAIC4, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modLAIC4),"\n")
 
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+         main="", percent=F,
+         ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 # CLASS Only
 
 
@@ -361,6 +449,15 @@ roc.modL1<-roc(TestActual, pred)
 
 plot.roc(roc.modL1, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL1),"\n")
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 
 #Combined
 
@@ -424,6 +521,16 @@ roc.modL2<-roc(TestActual, pred)
 plot.roc(roc.modL2, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL2),"\n")
 
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
 #Week2---------------------------------------
 
 cat("\n\n\nWeek 2:      B or Better\n\n\n")
@@ -471,7 +578,7 @@ dataLogTest <- subset(dataLog, split == FALSE)
 
 fitClass <- randomForest(as.factor(BorBetter) ~ FMCE.PrePercent47 +
                            HwWeek2 +
-                           ClTotalWeek2, data = dataLogTrain, ntree = 10000)
+                           ClTotalWeek2, data = dataLogTrain, ntree = 10000, importance = T)
 
 varImpPlot(fitClass)
 
@@ -482,12 +589,23 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+
 #fit all------------------------
 
 fit <- randomForest(as.factor(BorBetter) ~ FMCE.PrePercent47 +
                       HwWeek2 +
-                      ClTotalWeek2 +ACTSATM  +
-                      Cal1WVUCount + MathEntry, data = dataLogTrain, ntree = 10000)
+                      ClTotalWeek2 +
+                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000, importance = T)
 #print(fit) 
 print(importance(fit)) 
 
@@ -497,6 +615,35 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("FMCE", "HW", "Clickers", "Calculus 1 Attempts", "CURCMP", "GPA" )
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
+
 
 #fit really all------------------------
 
@@ -585,6 +732,15 @@ roc.modL1<-roc(TestActual, pred)
 plot.roc(roc.modL1, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL1),"\n")
 
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #Combined
 
 
@@ -644,6 +800,16 @@ roc.modL2<-roc(TestActual, pred)
 plot.roc(roc.modL2, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL2),"\n")
 
+
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #Week3---------------------------------------
 
 cat("\n\n\nWeek 3:      B or Better\n\n\n")
@@ -702,12 +868,21 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #fit all------------------------
 
 fit <- randomForest(as.factor(BorBetter) ~ FMCE.PrePercent47 +
                       HwWeek3 +
                       ClTotalWeek3 +
-                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000)
+                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000,
+                    importance = T)
 #print(fit) 
 print(importance(fit)) 
 
@@ -717,6 +892,34 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("FMCE", "HW", "Clickers", "Cal 1 Attempts", "CURCMP", "GPA" )
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
 
 #fit really all------------------------
 
@@ -805,6 +1008,14 @@ roc.modL1<-roc(TestActual, pred)
 plot.roc(roc.modL1, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL1),"\n")
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #Combined
 
 
@@ -866,7 +1077,13 @@ roc.modL2<-roc(TestActual, pred)
 plot.roc(roc.modL2, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL2),"\n")
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
 
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
 
 #Week4---------------------------------------
 
@@ -926,12 +1143,22 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #fit all------------------------
 
 fit <- randomForest(as.factor(BorBetter) ~ FMCE.PrePercent47 +
                       HwWeek4 +
                       ClTotalWeek4 +
-                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000)
+                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000,
+                    importance = T)
 #print(fit) 
 print(importance(fit)) 
 
@@ -941,6 +1168,35 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("FMCE", "HW", "Clickers", "Cal 1 Attempts", "CURCMP", "GPA" )
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
+
 
 #fit really all------------------------
 
@@ -1028,6 +1284,14 @@ roc.modL1<-roc(TestActual, pred)
 plot.roc(roc.modL1, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL1),"\n")
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #Combined
 
 
@@ -1089,6 +1353,13 @@ plot.roc(roc.modL2, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL2),"\n")
 
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
 
 
 #Week5---------------------------------------
@@ -1149,12 +1420,22 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #fit all------------------------
 
 fit <- randomForest(as.factor(BorBetter) ~ FMCE.PrePercent47 +
                       HwWeek5 +
                       ClTotalWeek5 + Test1+
-                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000)
+                      Cal1WVUCount + CURCMP + CURGPA, data = dataLogTrain, ntree = 10000,
+                    importance = T)
 #print(fit) 
 print(importance(fit)) 
 
@@ -1164,6 +1445,35 @@ pred<-predict(fit, newdata = dataLogTest, type = 'prob')
 roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
+
+
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("FMCE", "HW", "Clickers", "Test 1","Cal 1 Attempts", "CURCMP", "GPA" )
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
 
 #fit really all------------------------
 
@@ -1255,6 +1565,14 @@ roc.modL1<-roc(TestActual, pred)
 plot.roc(roc.modL1, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL1),"\n")
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 #Combined
 
 
@@ -1312,3 +1630,21 @@ roc.modL2<-roc(TestActual, pred)
 
 plot.roc(roc.modL2, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL2),"\n")
+
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+predtab2<-table(as.factor(as.numeric(pred>0.5)), TestActual)
+
+precision(predtab2)
+
+recall(predtab2)
+
+F_meas(predtab2)

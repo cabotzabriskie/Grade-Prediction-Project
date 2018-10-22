@@ -82,9 +82,9 @@ ggplot(Kap2, aes(x = WK, y = value, colour = Model, group = Model, size = 1)) +
   scale_color_manual(values=c("#ae62e8", "#78D4D0", "#87A765", "#FB9800")) +
   geom_hline(yintercept = 0, linetype = "dotted") +
   xlab("Time")+
-  ylab("Cohen's Kappa") #+
+  ylab("Cohen's Kappa") +
   ggtitle("  ") +
-  theme_few()#+
+  theme_few()+
   theme(plot.title = element_text(hjust = 0.5, size = 30, face = "bold", vjust = 1.5), 
         axis.text.y = element_text(size = 25),
         axis.title=element_text(size=30,face="bold"),
