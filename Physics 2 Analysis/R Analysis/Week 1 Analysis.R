@@ -8,6 +8,10 @@ library(plotmo)
 library(randomForest)
 library(varSelRF)
 library(MASS)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(Rmisc)
 wk1<-read.csv("Intermediate-Data/Week_1_data.csv", stringsAsFactors = F)
 wk1$dup1<-duplicated(wk1$Username, fromLast=F)
 wk1<-subset(wk1, !is.na(LabSection))
@@ -103,7 +107,7 @@ TestActual<-ifelse(test$FinalCourseGradeAB_Rest == "AB", 1,0)
 
 #Zero Rule model: guess everyone gets an AB
 
-ZeroRulePred<-rep(1,292)
+ZeroRulePred<-rep(1,297)
 
 confusionMatrix(data = as.factor(ZeroRulePred), reference = as.factor(TestActual))
 
@@ -203,6 +207,15 @@ plot.roc(roc.modL1.1, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.modL1.1),"\n")
 #compare ROC to last one
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
 roc.test(roc.modL1,roc.modL1.1)
 #not significantly different therefore we select modL1.1 here
 
@@ -265,6 +278,14 @@ roc.mod2<-roc(TestActual, pred[,2])
 plot.roc(roc.mod2,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod2),"\n")
 
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
 
 roc.test(roc.mod,roc.mod2)
 
@@ -309,6 +330,17 @@ roc.fitLog<-roc(TestActual, pred)
 
 plot.roc(roc.fitLog, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.fitLog),"\n")
+
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+
 #RF
 
 fit<-randomForest(as.factor(train$FinalCourseGradeAB_Rest2) ~ 
@@ -326,4 +358,30 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
 
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("Lecture Quiz", "HW", "GPA", "Phys 1 Grade")
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)

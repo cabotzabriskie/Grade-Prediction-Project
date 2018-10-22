@@ -8,6 +8,10 @@ library(plotmo)
 library(randomForest)
 library(varSelRF)
 library(MASS)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(Rmisc)
 wk1<-read.csv("Intermediate-Data/Week_1_data.csv", stringsAsFactors = F)
 wk1$dup1<-duplicated(wk1$Username, fromLast=F)
 wk1<-subset(wk1, !is.na(LabSection))
@@ -155,6 +159,8 @@ sink.number()
 #Multivariable Logistic Model-------------
 ##########################################
 
+#adding same vars as P1 model
+
 #Using the traditional method
 modL1<-glm(train$FinalCourseGradeAB_Rest2 ~ P111LastGradeAB_Rest  +  P111WVUCount  +  P112FirstAttempt  + CURGPA  +  HSGPA  +  ACTSATM + 
            ACTSATV + Cal1LastGradeAB_Rest + Cal1WVUCount + CUREnroll + CURAZcount  + APCount + 
@@ -271,7 +277,13 @@ roc.ModL2<-roc(TestActual, pred)
 plot.roc(roc.ModL2, print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.ModL2),"\n")
 
+rocobj<-plot.roc(TestActual, pred, print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
 
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
 
 ##################################
 #Random Forests-------------------
@@ -307,6 +319,32 @@ roc.mod<-roc(TestActual, pred[,2])
 plot.roc(roc.mod,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod),"\n")
 
+
+fitImp<-as.data.frame(fit[["importance"]])
+fitImp$names<-c("Phys 1 Grade", "Phys 1 Attempts","Phys 2 Attempts","GPA", "HSGPA",
+                "ACTSATM", "ACTSATV", "Cal 1 Grade",
+                "Cal 1 Attempts", "Credits\n Enrolled", "STEM Courses\n Enrolled",
+                "AP Count", "AP Credit", "First Fall", "First Gen", "Math Entry",           
+                "CURCMP")
+
+p1<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseAccuracy), y = MeanDecreaseAccuracy))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Accuracy")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+p2<-ggplot(fitImp, aes(x = reorder(names, MeanDecreaseGini), y = MeanDecreaseGini))+
+  geom_bar(stat = "identity", fill = "steelblue") +
+  ylab("Mean Decrease in Gini")+
+  xlab("Variable")+
+  coord_flip()+
+  theme_few()
+
+multiplot(p1, p2, cols = 2)
+
+
+
 #Using varSelRF
 
 
@@ -330,10 +368,19 @@ roc.mod2<-roc(TestActual, pred[,2])
 plot.roc(roc.mod2,print.thres = F, print.auc = T, legacy.axes = T)
 cat("AUC CI: ", ci.auc(roc.mod2),"\n")
 
+rocobj<-plot.roc(TestActual, pred[,2], print.thres = F, print.auc = T, legacy.axes = T,
+                 main="", percent=F,
+                 ci=TRUE)
+ciobj<-ci.se(rocobj, specificities = seq(0,1,.05))
+
+plot(ciobj, type = "shape", col="#79BD8F")
+plot(ci(rocobj, of = "thresholds", thresholds = "best"))
+
+
 
 roc.test(roc.mod,roc.mod2)
 
+pred2<-prediction(pred[,2], TestActual)
 
-
-
+recall(as.factor(pred), as.factor(TestActual))
 
